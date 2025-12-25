@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Party Booth</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- QR Code Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body { background-color: #212529; color: white; overflow-x: hidden; }
+        .mirror-x { transform: scaleX(-1); }
+        .cursor-pointer { cursor: pointer; }
+        
+        /* Flash Animation */
+        @keyframes flash {
+            0% { opacity: 0.8; }
+            100% { opacity: 0; }
+        }
+        .animate-flash { animation: flash 0.5s ease-out forwards; }
+        
+        /* Pulse Animation */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: .8; transform: scale(1.05); }
+        }
+        .animate-pulse { animation: pulse 2s infinite; }
+
+        /* Bounce Animation */
+        @keyframes bounce {
+            0%, 100% { transform: translateY(-25%); animation-timing-function: cubic-bezier(0.8,0,1,1); }
+            50% { transform: translateY(0); animation-timing-function: cubic-bezier(0,0,0.2,1); }
+        }
+        .animate-bounce { animation: bounce 1s infinite; }
+
+        /* Utilities */
+        .hidden { display: none !important; }
+        
+        /* Print Area Default (Hidden on Screen) */
+        #print-area { display: none; }
+
+        @media print {
+            body * { visibility: hidden; }
+            #print-area, #print-area * { visibility: visible; }
+            #print-area {
+                display: flex !important; /* Force flex display during print */
+                position: fixed; left: 0; top: 0; width: 100%; height: 100%;
+                align-items: center; justify-content: center;
+                margin: 0; padding: 0;
+                background: white;
+                z-index: 9999;
+            }
+            img.print-img { width: 100%; height: 100%; object-fit: contain; }
+            @page { size: 4in 6in; margin: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- VIEW: SETUP (HOME) -->
+    <div id="view-setup" class="container min-vh-100 d-flex flex-column align-items-center justify-content-center py-5">
+        <div class="text-center mb-5">
+            <h1 class="display-3 fw-bold mb-3 text-warning">Party Booth</h1>
+            <p class="text-white-50 fs-5">Configure your event settings below.</p>
+        </div>
+
+        <div class="card bg-dark border-secondary shadow-lg w-100" style="max-width: 500px;">
+            <div class="card-body p-4">
+                <!-- Preview -->
+                <div class="ratio ratio-4x3 bg-black rounded overflow-hidden border border-secondary mb-4 position-relative">
+                    <video id="preview-video" autoplay playsinline muted class="w-100 h-100 object-fit-cover mirror-x"></video>
+                </div>
+
+                <!-- Controls -->
+                <div class="mb-4">
+                    <label class="form-label text-white-50 small fw-bold">Select Camera</label>
+                    <select id="camera-select" class="form-select bg-secondary text-white border-0 mb-3"></select>
+
+                    <label class="form-label text-white-50 small fw-bold">Customize Event Logo</label>
+                    <div class="btn-group w-100 mb-3">
+                        <input type="radio" class="btn-check" name="logo-mode" id="mode-text" autocomplete="off" checked>
+                        <label class="btn btn-outline-secondary text-white" for="mode-text">Text Label</label>
+
+                        <input type="radio" class="btn-check" name="logo-mode" id="mode-image" autocomplete="off">
+                        <label class="btn btn-outline-secondary text-white" for="mode-image">Upload Logo</label>
+                    </div>
+
+                    <div id="input-text-group" class="mb-3">
+                        <input type="text" id="event-text" class="form-control bg-secondary text-white border-0 py-3" value="SUMMER BASH 2025" placeholder="Event Name">
+                    </div>
+                    <div id="input-image-group" class="hidden mb-3">
+                        <input type="file" id="logo-upload" accept="image/*" class="d-none">
+                        <label for="logo-upload" class="d-flex align-items-center justify-content-center w-100 py-3 bg-secondary bg-opacity-25 border border-secondary border-dashed rounded cursor-pointer text-white-50">
+                            <i data-lucide="upload" class="me-2"></i> <span id="logo-status">Choose Image...</span>
+                        </label>
+                    </div>
+
+                    <!-- Auto Save Configuration -->
+                    <label class="form-label text-white-50 small fw-bold">Auto-Save Location</label>
+                    <button id="btn-select-folder" class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center gap-2 py-3 border-secondary text-white">
+                        <i data-lucide="folder-open"></i> <span id="folder-status">Select Folder for Auto-Save</span>
+                    </button>
+                    <div class="form-text text-white-50 small mt-1">If selected, images will save here automatically.</div>
+                </div>
+
+                <button id="btn-launch" class="btn btn-primary w-100 py-3 rounded-3 fs-5 fw-bold d-flex align-items-center justify-content-center gap-2 shadow">
+                    <i data-lucide="maximize"></i> Launch Photobooth
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW: BOOTH START (ATTRACT SCREEN) -->
+    <div id="view-attract" class="hidden position-fixed top-0 start-0 w-100 h-100 bg-black d-flex flex-column align-items-center justify-content-center overflow-hidden">
+        <div class="position-absolute top-0 start-0 w-100 h-100 opacity-50">
+            <video id="attract-video" autoplay playsinline muted class="w-100 h-100 object-fit-cover mirror-x"></video>
+        </div>
+        <div class="position-relative z-1 d-flex flex-column align-items-center">
+            <h1 id="display-event-name" class="display-1 fw-bold text-white mb-5 text-center" style="text-shadow: 0 4px 4px rgba(0,0,0,0.8)">EVENT</h1>
+            <button id="btn-start" class="btn btn-light btn-lg rounded-pill px-5 py-3 fs-2 fw-bold shadow animate-pulse">
+                Touch to Start
+            </button>
+        </div>
+    </div>
+
+    <!-- VIEW: CAPTURE (COUNTDOWN & FLASH) -->
+    <div id="view-capture" class="hidden position-fixed top-0 start-0 w-100 h-100 bg-black z-3 d-flex flex-column align-items-center justify-content-center">
+        <div class="position-relative w-100 border border-4 border-dark rounded-4 overflow-hidden shadow-lg" style="max-width: 800px; aspect-ratio: 540/330;">
+            <video id="capture-video" autoplay playsinline muted class="w-100 h-100 object-fit-cover mirror-x"></video>
+            
+            <div id="flash-overlay" class="position-absolute top-0 start-0 w-100 h-100 bg-white hidden" style="pointer-events: none;"></div>
+
+            <!-- Countdown: Positioned Bottom Right -->
+            <div id="countdown-overlay" class="position-absolute bottom-0 end-0 p-4 hidden" style="pointer-events: none;">
+                <div id="countdown-text" class="text-white fw-bold animate-pulse" style="font-size: 8rem; text-shadow: 0 0 15px rgba(0,0,0,0.8); line-height: 1;">3</div>
+            </div>
+            
+            <div class="position-absolute bottom-0 start-0 w-100 mb-4 d-flex justify-content-center gap-3">
+                <div id="dot-1" class="rounded-circle bg-secondary" style="width: 1rem; height: 1rem;"></div>
+                <div id="dot-2" class="rounded-circle bg-secondary" style="width: 1rem; height: 1rem;"></div>
+                <div id="dot-3" class="rounded-circle bg-secondary" style="width: 1rem; height: 1rem;"></div>
+                <div id="dot-4" class="rounded-circle bg-secondary" style="width: 1rem; height: 1rem;"></div>
+            </div>
+        </div>
+        <div class="mt-4 fs-3 fw-medium text-white text-uppercase">
+            Pose for photo <span id="current-shot-num">1</span> of 4
+        </div>
+    </div>
+
+    <!-- VIEW: PROCESSING -->
+    <div id="view-processing" class="hidden position-fixed top-0 start-0 w-100 h-100 bg-dark z-3 d-flex flex-column align-items-center justify-content-center">
+        <div class="text-primary mb-4 spinner-border" style="width: 4rem; height: 4rem;"></div>
+        <h2 class="fs-2 fw-bold animate-pulse">Developing Photos...</h2>
+    </div>
+
+    <!-- VIEW: RESULT -->
+    <div id="view-result" class="hidden min-vh-100 d-flex flex-column align-items-center justify-content-center p-3 bg-dark">
+        <div class="container" style="max-width: 1200px;">
+            <div class="row g-5 align-items-center">
+                <div class="col-lg-6 d-flex justify-content-center">
+                    <div class="bg-white p-2 shadow-lg rounded" style="transform: rotate(1deg);">
+                        <img id="final-image" src="" alt="Strip" class="img-fluid border" style="max-height: 70vh; width: auto;">
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <h2 class="display-5 fw-bold mb-2">Ready to Print!</h2>
+                    <p class="text-white-50 mb-4">Your 4R photo is ready. It contains two 2x6" strips.</p>
+                    
+                    <div id="auto-save-toast" class="alert alert-success d-flex align-items-center hidden" role="alert">
+                        <i data-lucide="check-circle" class="me-2"></i>
+                        <div>Image saved automatically!</div>
+                    </div>
+
+                    <!-- Color Picker -->
+                    <div class="card bg-secondary bg-opacity-10 border-secondary mb-4">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center gap-2 mb-3 small fw-bold text-white-50">
+                                <i data-lucide="palette"></i> Customize Background
+                            </div>
+                            <div class="d-flex flex-wrap gap-2" id="color-palette">
+                                <!-- Colors injected by JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-3">
+                        <button onclick="window.print()" class="btn btn-primary btn-lg fw-bold d-flex align-items-center justify-content-center gap-2 shadow">
+                            <i data-lucide="printer"></i> Print Photo
+                        </button>
+                        <a id="btn-download" href="#" class="btn btn-secondary fw-semibold py-2 d-flex align-items-center justify-content-center gap-2">
+                            <i data-lucide="download"></i> Save Digital Copy (Manual)
+                        </a>
+                        <button id="btn-share" class="btn btn-outline-light fw-semibold py-2 d-flex align-items-center justify-content-center gap-2">
+                            <i data-lucide="qr-code"></i> Get Mobile Link
+                        </button>
+                        <button id="btn-new-session" class="btn btn-outline-light fw-semibold py-2 d-flex align-items-center justify-content-center gap-2 mt-2">
+                            <i data-lucide="refresh-ccw"></i> New Session
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: QR CODE -->
+    <div id="qr-modal" class="hidden position-fixed top-0 start-0 w-100 h-100 bg-black bg-opacity-75 z-index-modal d-flex align-items-center justify-content-center" style="z-index: 10000;">
+        <div class="bg-dark p-4 rounded shadow-lg text-center border border-secondary" style="max-width: 90vw; width: 350px;">
+            <h3 class="fw-bold mb-4">Scan to Download</h3>
+            <div id="qr-content" class="d-flex flex-column align-items-center justify-content-center bg-white p-3 rounded mb-3 text-black" style="min-height: 200px;">
+                <!-- QR renders here -->
+            </div>
+            <button id="btn-close-qr" class="btn btn-secondary w-100">Close</button>
+        </div>
+    </div>
+
+    <!-- Print Area -->
+    <div id="print-area">
+        <img id="print-img" class="print-img">
+    </div>
+
+    <!-- Hidden Canvas -->
+    <canvas id="crop-canvas" class="hidden"></canvas>
+    <canvas id="final-canvas" class="hidden"></canvas>
+
+    <!-- LOGIC -->
+    <script>
+        lucide.createIcons();
+
+        // State
+        let stream = null;
+        let photos = [];
+        let config = {
+            text: "SUMMER BASH 2025",
+            logo: null,
+            mode: 'text',
+            deviceId: null,
+            bgColor: '#ffffff'
+        };
+        // Global handle for the folder (persists in memory during SPA session)
+        let saveDirectoryHandle = null;
+
+        const colors = ['#ffffff', '#000000', '#FFD700', '#fce7f3', '#dbeafe', '#fef3c7', '#f3f4f6', '#1f2937'];
+
+        // DOM Elements
+        const views = {
+            setup: document.getElementById('view-setup'),
+            attract: document.getElementById('view-attract'),
+            capture: document.getElementById('view-capture'),
+            processing: document.getElementById('view-processing'),
+            result: document.getElementById('view-result')
+        };
+        const videoEls = [
+            document.getElementById('preview-video'), 
+            document.getElementById('attract-video'), 
+            document.getElementById('capture-video')
+        ];
+
+        // Init
+        async function init() {
+            await getCameras();
+            startCamera();
+            setupColorPalette();
+            
+            // Check URL param for booth mode (Launch in separate tab fallback)
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('mode') === 'booth') {
+                loadConfig();
+                switchView('attract');
+            }
+        }
+        
+        function switchView(viewName) {
+            Object.values(views).forEach(el => el.classList.add('hidden'));
+            views[viewName].classList.remove('hidden');
+            if(viewName === 'attract' || viewName === 'capture' || viewName === 'setup') {
+                startCamera(config.deviceId);
+            }
+        }
+
+        // Camera Logic
+        async function getCameras() {
+            try {
+                await navigator.mediaDevices.getUserMedia({ video: true }); // Request perm
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoDevices = devices.filter(d => d.kind === 'videoinput');
+                const select = document.getElementById('camera-select');
+                select.innerHTML = '';
+                videoDevices.forEach((d, i) => {
+                    const opt = document.createElement('option');
+                    opt.value = d.deviceId;
+                    opt.text = d.label || `Camera ${i+1}`;
+                    select.appendChild(opt);
+                });
+                select.onchange = (e) => startCamera(e.target.value);
+            } catch(e) { console.error(e); }
+        }
+
+        async function startCamera(deviceId = null) {
+            if (stream && stream.active) {
+                const track = stream.getVideoTracks()[0];
+                const settings = track.getSettings();
+                if (!deviceId || (settings.deviceId === deviceId)) {
+                    videoEls.forEach(v => {
+                        if (v.srcObject !== stream) {
+                            v.srcObject = stream;
+                            v.play().catch(e => console.log("Play error", e));
+                        }
+                    });
+                    return; 
+                }
+            }
+
+            if(stream) stream.getTracks().forEach(t => t.stop());
+            
+            const constraints = {
+                video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' }
+            };
+            if(deviceId) constraints.video.deviceId = { exact: deviceId };
+
+            try {
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+                videoEls.forEach(v => v.srcObject = stream);
+                if(deviceId) config.deviceId = deviceId;
+            } catch(err) { console.error("Cam error", err); }
+        }
+
+        // Setup Logic
+        document.getElementById('mode-text').onchange = () => {
+            config.mode = 'text';
+            document.getElementById('input-text-group').classList.remove('hidden');
+            document.getElementById('input-image-group').classList.add('hidden');
+        };
+        document.getElementById('mode-image').onchange = () => {
+            config.mode = 'image';
+            document.getElementById('input-text-group').classList.add('hidden');
+            document.getElementById('input-image-group').classList.remove('hidden');
+        };
+        document.getElementById('event-text').oninput = (e) => config.text = e.target.value;
+        
+        document.getElementById('logo-upload').onchange = (e) => {
+            const file = e.target.files[0];
+            if(file) {
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    config.logo = evt.target.result;
+                    document.getElementById('logo-status').innerText = "Logo Uploaded!";
+                    document.getElementById('logo-status').classList.add('text-success');
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+
+        // --- FOLDER SELECTION LOGIC ---
+        document.getElementById('btn-select-folder').onclick = async () => {
+            if ('showDirectoryPicker' in window) {
+                try {
+                    saveDirectoryHandle = await window.showDirectoryPicker({
+                        mode: 'readwrite'
+                    });
+                    const statusSpan = document.getElementById('folder-status');
+                    statusSpan.innerText = `Auto-Save to: ${saveDirectoryHandle.name}`;
+                    statusSpan.classList.add('text-success', 'fw-bold');
+                } catch (err) {
+                    console.log("Folder selection cancelled or failed", err);
+                }
+            } else {
+                alert("Your browser does not support automatic folder saving. Please use Chrome or Edge.");
+            }
+        };
+
+        // Launch Logic (Modified to Single Page for Persistence)
+        document.getElementById('btn-launch').onclick = () => {
+            config.deviceId = document.getElementById('camera-select').value;
+            localStorage.setItem('pb_config', JSON.stringify(config));
+            
+            // Try to go fullscreen for Kiosk feel
+            if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen().catch(e => console.log(e));
+            }
+            
+            // Switch view internally to keep DirectoryHandle alive
+            loadConfig();
+            switchView('attract');
+        };
+
+        function loadConfig() {
+            const saved = localStorage.getItem('pb_config');
+            if(saved) config = JSON.parse(saved);
+            document.getElementById('display-event-name').innerText = config.text;
+        }
+
+        // Booth Logic
+        document.getElementById('btn-start').onclick = () => {
+            photos = [];
+            runSequence(1);
+        };
+
+        function runSequence(shotNum) {
+            if(shotNum > 4) {
+                switchView('processing');
+                setTimeout(generateStrip, 1000);
+                return;
+            }
+
+            switchView('capture');
+            document.getElementById('current-shot-num').innerText = shotNum;
+            
+            for(let i=1; i<=4; i++) {
+                const dot = document.getElementById(`dot-${i}`);
+                dot.className = i < shotNum ? 'rounded-circle bg-success' : (i===shotNum ? 'rounded-circle bg-white animate-bounce' : 'rounded-circle bg-secondary');
+            }
+
+            let count = 3;
+            const cntEl = document.getElementById('countdown-text');
+            const cntOverlay = document.getElementById('countdown-overlay');
+            cntOverlay.classList.remove('hidden');
+            cntEl.innerText = count;
+
+            const timer = setInterval(() => {
+                count--;
+                if(count > 0) {
+                    cntEl.innerText = count;
+                } else {
+                    clearInterval(timer);
+                    cntOverlay.classList.add('hidden');
+                    takePhoto(shotNum);
+                }
+            }, 1000);
+        }
+
+        function takePhoto(shotNum) {
+            const flash = document.getElementById('flash-overlay');
+            flash.classList.remove('hidden');
+            flash.classList.add('animate-flash');
+            
+            const video = document.getElementById('capture-video');
+            const canvas = document.getElementById('crop-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            const targetW = 1080;
+            const targetH = 660; 
+            const targetRatio = targetW / targetH;
+
+            canvas.width = targetW;
+            canvas.height = targetH;
+            
+            const vidW = video.videoWidth;
+            const vidH = video.videoHeight;
+            const vidRatio = vidW / vidH;
+            
+            let sW, sH, sX, sY;
+
+            if (vidRatio > targetRatio) {
+                sH = vidH;
+                sW = vidH * targetRatio;
+                sX = (vidW - sW) / 2;
+                sY = 0;
+            } else {
+                sW = vidW;
+                sH = vidW / targetRatio;
+                sX = 0;
+                sY = (vidH - sH) / 2;
+            }
+            
+            ctx.translate(targetW, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(video, sX, sY, sW, sH, 0, 0, targetW, targetH);
+            
+            photos.push(canvas.toDataURL('image/jpeg', 0.9));
+
+            setTimeout(() => {
+                flash.classList.remove('animate-flash');
+                flash.classList.add('hidden');
+                runSequence(shotNum + 1);
+            }, 500);
+        }
+
+        // Generation Logic
+        function setupColorPalette() {
+            const container = document.getElementById('color-palette');
+            colors.forEach(c => {
+                const btn = document.createElement('button');
+                btn.className = 'rounded-circle border border-2';
+                btn.style.width = '32px';
+                btn.style.height = '32px';
+                btn.style.backgroundColor = c;
+                btn.onclick = () => {
+                    config.bgColor = c;
+                    generateStrip();
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        function generateStrip() {
+            const canvas = document.getElementById('final-canvas');
+            const ctx = canvas.getContext('2d');
+            const W = 1200;
+            const H = 1800;
+            
+            canvas.width = W;
+            canvas.height = H;
+            
+            ctx.fillStyle = config.bgColor;
+            ctx.fillRect(0, 0, W, H);
+            
+            const hex = config.bgColor.replace('#','');
+            const r = parseInt(hex.substring(0,2),16);
+            const g = parseInt(hex.substring(2,4),16);
+            const b = parseInt(hex.substring(4,6),16);
+            const isDark = (r*299 + g*587 + b*114)/1000 < 128;
+            const textColor = isDark ? '#fff' : '#222';
+
+            const drawColumn = (offsetX) => {
+                const stripW = 600;
+                const margin = 30;
+                const innerW = stripW - (margin*2);
+                const photoH = 330;
+                const spacing = 30;
+                const topM = 50;
+
+                photos.forEach((src, i) => {
+                    const img = new Image();
+                    img.src = src;
+                    const y = topM + (i * (photoH + spacing));
+                    ctx.drawImage(img, offsetX + margin, y, innerW, photoH);
+                });
+
+                const logoY = 1550;
+                if(config.mode === 'image' && config.logo) {
+                    const lImg = new Image();
+                    lImg.src = config.logo;
+                    const scale = Math.min(innerW/lImg.width, 200/lImg.height);
+                    const lw = lImg.width * scale;
+                    const lh = lImg.height * scale;
+                    ctx.drawImage(lImg, offsetX + (stripW-lw)/2, logoY + (200-lh)/2, lw, lh);
+                } else {
+                    ctx.fillStyle = textColor;
+                    ctx.font = 'bold 48px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(config.text, offsetX + 300, logoY + 100);
+                    
+                    ctx.font = '24px sans-serif';
+                    ctx.fillText(new Date().toLocaleDateString(), offsetX + 300, logoY + 150);
+                }
+            };
+            
+            const loadAll = photos.map(src => new Promise(r => { const i = new Image(); i.onload = () => r(i); i.src = src; }));
+            if(config.mode === 'image' && config.logo) loadAll.push(new Promise(r => { const i = new Image(); i.onload = () => r(i); i.src = config.logo; }));
+
+            Promise.all(loadAll).then(async () => {
+                drawColumn(0);
+                drawColumn(600);
+                
+                // Cut line
+                ctx.beginPath();
+                ctx.setLineDash([20, 20]);
+                ctx.strokeStyle = isDark ? '#555' : '#ccc';
+                ctx.lineWidth = 2;
+                ctx.moveTo(600, 0);
+                ctx.lineTo(600, 1800);
+                ctx.stroke();
+
+                const finalData = canvas.toDataURL('image/jpeg', 1.0);
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                const filename = `photobooth-${timestamp}.jpg`;
+
+                document.getElementById('final-image').src = finalData;
+                document.getElementById('print-img').src = finalData;
+                
+                const btnDownload = document.getElementById('btn-download');
+                btnDownload.dataset.src = finalData;
+                btnDownload.dataset.filename = filename;
+                btnDownload.href = "#";
+
+                // --- AUTO SAVE LOGIC ---
+                document.getElementById('auto-save-toast').classList.add('hidden'); // Reset toast
+                
+                if (saveDirectoryHandle) {
+                    try {
+                        // Create Blob from Base64
+                        const res = await fetch(finalData);
+                        const blob = await res.blob();
+                        
+                        // Write to selected folder
+                        const fileHandle = await saveDirectoryHandle.getFileHandle(filename, { create: true });
+                        const writable = await fileHandle.createWritable();
+                        await writable.write(blob);
+                        await writable.close();
+                        
+                        // Show success message
+                        const toast = document.getElementById('auto-save-toast');
+                        toast.classList.remove('hidden');
+                        setTimeout(() => toast.classList.add('hidden'), 5000);
+                    } catch (err) {
+                        console.error("Auto-save failed", err);
+                        alert("Could not auto-save to folder. Please save manually.");
+                    }
+                }
+                
+                switchView('result');
+            });
+        }
+
+        // Manual Save Handler
+        document.getElementById('btn-download').onclick = async (e) => {
+            e.preventDefault();
+            const btn = e.currentTarget;
+            if(!btn.dataset.src) return;
+
+            try {
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: btn.dataset.filename,
+                    types: [{ description: 'JPEG Image', accept: {'image/jpeg': ['.jpg']} }],
+                });
+                const writable = await handle.createWritable();
+                const response = await fetch(btn.dataset.src);
+                await response.body.pipeTo(writable);
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                     const link = document.createElement('a');
+                     link.href = btn.dataset.src;
+                     link.download = btn.dataset.filename;
+                     document.body.appendChild(link);
+                     link.click();
+                     document.body.removeChild(link);
+                }
+            }
+        };
+
+        // Utility: Safe Blob Conversion
+        function dataURItoBlob(dataURI) {
+            try {
+                var byteString = atob(dataURI.split(',')[1]);
+                var mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+                var ab = new ArrayBuffer(byteString.length);
+                var ia = new Uint8Array(ab);
+                for (var i = 0; i < byteString.length; i++) {
+                    ia[i] = byteString.charCodeAt(i);
+                }
+                return new Blob([ab], {type: mimeString});
+            } catch (e) {
+                console.error("Blob conversion failed", e);
+                return null;
+            }
+        }
+
+        // QR Share Logic
+        document.getElementById('btn-share').onclick = async () => {
+            const modal = document.getElementById('qr-modal');
+            modal.classList.remove('hidden');
+            const qrContainer = document.getElementById('qr-content');
+            qrContainer.innerHTML = '<div class="spinner-border text-dark"></div><div class="mt-2 text-dark">Creating Link...</div>';
+
+            try {
+                // 1. Convert Base64 to Blob safely
+                const blob = dataURItoBlob(document.getElementById('final-image').src);
+                if (!blob) throw new Error("Image processing failed");
+
+                // 2. Upload to file.io
+                const formData = new FormData();
+                formData.append('file', blob, 'photobooth.jpg');
+                
+                // Using file.io default (expires 14 days or 1 download)
+                const response = await fetch('https://file.io', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Server Error: ${response.status}`);
+                }
+
+                const json = await response.json();
+                
+                if(json.success) {
+                     qrContainer.innerHTML = '';
+                     new QRCode(qrContainer, {
+                        text: json.link,
+                        width: 200,
+                        height: 200
+                     });
+                     const linkMsg = document.createElement('div');
+                     linkMsg.className = "mt-3 small text-muted";
+                     linkMsg.innerText = "Scan to download (1-time link)";
+                     qrContainer.appendChild(linkMsg);
+                } else {
+                    throw new Error(json.message || 'Upload failed');
+                }
+            } catch(e) {
+                qrContainer.innerHTML = `<div class="text-danger text-center px-2"><b>Error:</b><br>${e.message}<br><small>Check console for details.</small></div>`;
+                console.error(e);
+            }
+        };
+
+        document.getElementById('btn-close-qr').onclick = () => {
+            document.getElementById('qr-modal').classList.add('hidden');
+        };
+
+        document.getElementById('btn-new-session').onclick = () => {
+            switchView('attract');
+        };
+
+        init();
+    </script>
+</body>
+</html>
