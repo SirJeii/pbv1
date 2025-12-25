@@ -632,67 +632,43 @@
             }
         };
 
-        // Utility: Safe Blob Conversion
-        function dataURItoBlob(dataURI) {
-            try {
-                var byteString = atob(dataURI.split(',')[1]);
-                var mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
-                var ab = new ArrayBuffer(byteString.length);
-                var ia = new Uint8Array(ab);
-                for (var i = 0; i < byteString.length; i++) {
-                    ia[i] = byteString.charCodeAt(i);
-                }
-                return new Blob([ab], {type: mimeString});
-            } catch (e) {
-                console.error("Blob conversion failed", e);
-                return null;
-            }
-        }
-
         // QR Share Logic
         document.getElementById('btn-share').onclick = async () => {
+            // Show Loading Modal
             const modal = document.getElementById('qr-modal');
             modal.classList.remove('hidden');
-            const qrContainer = document.getElementById('qr-content');
-            qrContainer.innerHTML = '<div class="spinner-border text-dark"></div><div class="mt-2 text-dark">Creating Link...</div>';
+            document.getElementById('qr-content').innerHTML = '<div class="spinner-border text-dark"></div><div class="mt-2 text-dark">Creating Link...</div>';
 
             try {
-                // 1. Convert Base64 to Blob safely
-                const blob = dataURItoBlob(document.getElementById('final-image').src);
-                if (!blob) throw new Error("Image processing failed");
-
-                // 2. Upload to file.io
+                // 1. Get Blob
+                const blob = await (await fetch(document.getElementById('final-image').src)).blob();
+                
+                // 2. Upload to file.io (Ephemeral storage)
                 const formData = new FormData();
                 formData.append('file', blob, 'photobooth.jpg');
                 
-                // Using file.io default (expires 14 days or 1 download)
-                const response = await fetch('https://file.io', {
+                const response = await fetch('https://file.io/?expires=1d', {
                     method: 'POST',
                     body: formData
                 });
-                
-                if (!response.ok) {
-                    throw new Error(`Server Error: ${response.status}`);
-                }
-
                 const json = await response.json();
                 
                 if(json.success) {
-                     qrContainer.innerHTML = '';
-                     new QRCode(qrContainer, {
+                     document.getElementById('qr-content').innerHTML = '';
+                     new QRCode(document.getElementById('qr-content'), {
                         text: json.link,
                         width: 200,
                         height: 200
                      });
                      const linkMsg = document.createElement('div');
                      linkMsg.className = "mt-3 small text-muted";
-                     linkMsg.innerText = "Scan to download (1-time link)";
-                     qrContainer.appendChild(linkMsg);
+                     linkMsg.innerText = "Scan to download (Link expires after 1 download)";
+                     document.getElementById('qr-content').appendChild(linkMsg);
                 } else {
-                    throw new Error(json.message || 'Upload failed');
+                    throw new Error('Upload failed');
                 }
             } catch(e) {
-                qrContainer.innerHTML = `<div class="text-danger text-center px-2"><b>Error:</b><br>${e.message}<br><small>Check console for details.</small></div>`;
+                document.getElementById('qr-content').innerHTML = '<div class="text-danger">Could not generate link.<br>Check internet connection.</div>';
                 console.error(e);
             }
         };
