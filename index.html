@@ -36,6 +36,27 @@
         }
         .animate-bounce { animation: bounce 1s infinite; }
 
+        /* Strip Browsing Animations */
+        .strip-container {
+            transition: transform 0.3s ease-out, opacity 0.2s ease-out;
+        }
+        .slide-out-left {
+            transform: translateX(-50px) rotate(-2deg) !important;
+            opacity: 0;
+        }
+        .slide-out-right {
+            transform: translateX(50px) rotate(2deg) !important;
+            opacity: 0;
+        }
+        .slide-in-start-left {
+            transform: translateX(-50px) !important;
+            opacity: 0;
+        }
+        .slide-in-start-right {
+            transform: translateX(50px) !important;
+            opacity: 0;
+        }
+
         /* Utilities */
         .hidden { display: none !important; }
         
@@ -160,30 +181,60 @@
     <div id="view-result" class="hidden min-vh-100 d-flex flex-column align-items-center justify-content-center p-3 bg-dark">
         <div class="container" style="max-width: 1200px;">
             <div class="row g-5 align-items-center">
-                <div class="col-lg-6 d-flex justify-content-center">
-                    <div class="bg-white p-2 shadow-lg rounded" style="transform: rotate(1deg);">
-                        <img id="final-image" src="" alt="Strip" class="img-fluid border" style="max-height: 70vh; width: auto;">
+                
+                <!-- Left Column: Image + Carousel Controls -->
+                <div class="col-lg-6 d-flex flex-column align-items-center">
+                    
+                    <!-- Strip Image Container -->
+                    <div id="strip-container" class="strip-container bg-white p-2 shadow-lg rounded mb-4" style="transform: rotate(1deg);">
+                        <img id="final-image" src="" alt="Strip" class="img-fluid border" style="max-height: 60vh; width: auto;">
+                    </div>
+
+                    <!-- Customization Card (Moved below strip) -->
+                    <div class="card bg-secondary bg-opacity-10 border-secondary w-100 mb-4" style="max-width: 450px;">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center justify-content-center gap-2 mb-3 small fw-bold text-white-50">
+                                <i data-lucide="layout-template"></i> Choose Strip Theme
+                            </div>
+                            
+                            <div class="d-flex align-items-center justify-content-between bg-dark rounded-4 p-2 border border-secondary">
+                                <button id="btn-prev-style" class="btn btn-link text-white p-0 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                    <i data-lucide="chevron-left" style="width: 28px; height: 28px;"></i>
+                                </button>
+                                
+                                <div class="text-center flex-grow-1">
+                                    <span id="current-style-name" class="fw-bold fs-4 d-block text-white mb-1">Classic White</span>
+                                    <div class="d-flex justify-content-center gap-1" id="style-dots">
+                                        <!-- Dots injected by JS -->
+                                    </div>
+                                </div>
+
+                                <button id="btn-next-style" class="btn btn-link text-white p-0 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                    <i data-lucide="chevron-right" style="width: 28px; height: 28px;"></i>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
+
+                <!-- Right Column: Actions & Details -->
                 <div class="col-lg-6">
+                    
+                    <!-- Static QR Code Display -->
+                    <div id="result-qr-container" class="d-flex align-items-center mb-4 p-3 bg-white text-dark rounded shadow-sm border" style="max-width: 100%; width: fit-content;">
+                        <div id="static-qr-code"></div>
+                        <div class="ms-3">
+                            <h5 class="fw-bold mb-1">Get Your Photos</h5>
+                            <p class="mb-0 small text-muted">Scan to view Google Drive Gallery</p>
+                        </div>
+                    </div>
+
                     <h2 class="display-5 fw-bold mb-2">Ready to Print!</h2>
                     <p class="text-white-50 mb-4">Your 4R photo is ready. It contains two 2x6" strips.</p>
                     
                     <div id="auto-save-toast" class="alert alert-success d-flex align-items-center hidden" role="alert">
                         <i data-lucide="check-circle" class="me-2"></i>
                         <div>Image saved automatically!</div>
-                    </div>
-
-                    <!-- Color Picker -->
-                    <div class="card bg-secondary bg-opacity-10 border-secondary mb-4">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center gap-2 mb-3 small fw-bold text-white-50">
-                                <i data-lucide="palette"></i> Customize Background
-                            </div>
-                            <div class="d-flex flex-wrap gap-2" id="color-palette">
-                                <!-- Colors injected by JS -->
-                            </div>
-                        </div>
                     </div>
 
                     <div class="d-grid gap-3">
@@ -193,26 +244,12 @@
                         <a id="btn-download" href="#" class="btn btn-secondary fw-semibold py-2 d-flex align-items-center justify-content-center gap-2">
                             <i data-lucide="download"></i> Save Digital Copy (Manual)
                         </a>
-                        <button id="btn-share" class="btn btn-outline-light fw-semibold py-2 d-flex align-items-center justify-content-center gap-2">
-                            <i data-lucide="qr-code"></i> Get Mobile Link
-                        </button>
                         <button id="btn-new-session" class="btn btn-outline-light fw-semibold py-2 d-flex align-items-center justify-content-center gap-2 mt-2">
                             <i data-lucide="refresh-ccw"></i> New Session
                         </button>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <!-- MODAL: QR CODE -->
-    <div id="qr-modal" class="hidden position-fixed top-0 start-0 w-100 h-100 bg-black bg-opacity-75 z-index-modal d-flex align-items-center justify-content-center" style="z-index: 10000;">
-        <div class="bg-dark p-4 rounded shadow-lg text-center border border-secondary" style="max-width: 90vw; width: 350px;">
-            <h3 class="fw-bold mb-4">Scan to Download</h3>
-            <div id="qr-content" class="d-flex flex-column align-items-center justify-content-center bg-white p-3 rounded mb-3 text-black" style="min-height: 200px;">
-                <!-- QR renders here -->
-            </div>
-            <button id="btn-close-qr" class="btn btn-secondary w-100">Close</button>
         </div>
     </div>
 
@@ -237,12 +274,330 @@
             logo: null,
             mode: 'text',
             deviceId: null,
-            bgColor: '#ffffff'
+            styleIndex: 0 // Default to first style
         };
         // Global handle for the folder (persists in memory during SPA session)
         let saveDirectoryHandle = null;
 
-        const colors = ['#ffffff', '#000000', '#FFD700', '#fce7f3', '#dbeafe', '#fef3c7', '#f3f4f6', '#1f2937'];
+        // --- STRIP STYLES DEFINITION ---
+        const stripStyles = [
+            {
+                name: 'Classic White',
+                textColor: '#222',
+                borderColor: '#eee',
+                cutLine: '#ccc',
+                draw: (ctx, w, h) => {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, w, h);
+                }
+            },
+            {
+                name: 'Cinema Film',
+                textColor: '#fff',
+                borderColor: '#333',
+                cutLine: '#555',
+                draw: (ctx, w, h) => {
+                    ctx.fillStyle = '#111'; // Dark film background
+                    ctx.fillRect(0, 0, w, h);
+                    
+                    // Draw Sprocket holes on sides of strip
+                    ctx.fillStyle = '#fff';
+                    const holeW = 15;
+                    const holeH = 10;
+                    const spacing = 30;
+                    
+                    // Left and Right holes for Left Strip
+                    for(let y=20; y<h; y+=spacing) {
+                        ctx.fillRect(10, y, holeW, holeH); // Left edge of canvas
+                        ctx.fillRect(575, y, holeW, holeH); // Right edge of left strip
+                        
+                        ctx.fillRect(610, y, holeW, holeH); // Left edge of right strip
+                        ctx.fillRect(1175, y, holeW, holeH); // Right edge of canvas
+                    }
+                }
+            },
+            {
+                name: 'Galaxy',
+                textColor: '#fff',
+                borderColor: 'rgba(255,255,255,0.3)',
+                cutLine: '#4b0082',
+                draw: (ctx, w, h) => {
+                    const grd = ctx.createLinearGradient(0, 0, 0, h);
+                    grd.addColorStop(0, "#0f0c29");
+                    grd.addColorStop(0.5, "#302b63");
+                    grd.addColorStop(1, "#24243e");
+                    ctx.fillStyle = grd;
+                    ctx.fillRect(0, 0, w, h);
+                    ctx.fillStyle = '#fff';
+                    for(let i=0; i<150; i++) {
+                        ctx.beginPath();
+                        ctx.arc(Math.random()*w, Math.random()*h, Math.random()*2, 0, Math.PI*2);
+                        ctx.fill();
+                    }
+                }
+            },
+            {
+                name: 'Love Hearts',
+                textColor: '#b91c1c', // red-700
+                borderColor: '#fecaca', // red-200
+                cutLine: '#fca5a5',
+                draw: (ctx, w, h) => {
+                    ctx.fillStyle = '#fff1f2'; // rose-50
+                    ctx.fillRect(0, 0, w, h);
+                    
+                    // Draw random hearts pattern
+                    ctx.fillStyle = 'rgba(253, 164, 175, 0.4)'; // rose-300 transparent
+                    for(let i=0; i<100; i++) {
+                        const x = Math.random() * w;
+                        const y = Math.random() * h;
+                        const size = 10 + Math.random() * 20;
+                        ctx.beginPath();
+                        ctx.moveTo(x, y);
+                        ctx.bezierCurveTo(x - size/2, y - size/2, x - size, y + size/3, x, y + size);
+                        ctx.bezierCurveTo(x + size, y + size/3, x + size/2, y - size/2, x, y);
+                        ctx.fill();
+                    }
+                }
+            },
+            {
+                name: 'Hazard',
+                textColor: '#000',
+                borderColor: '#000',
+                cutLine: '#000',
+                draw: (ctx, w, h) => {
+                    ctx.fillStyle = '#facc15'; // yellow-400
+                    ctx.fillRect(0, 0, w, h);
+                    ctx.fillStyle = '#000';
+                    for(let i=-w; i<w+h; i+=60) {
+                        ctx.beginPath();
+                        ctx.moveTo(i, 0);
+                        ctx.lineTo(i+30, 0);
+                        ctx.lineTo(i-h+30, h);
+                        ctx.lineTo(i-h, h);
+                        ctx.fill();
+                    }
+                }
+            },
+            {
+                name: 'Retro Pop',
+                textColor: '#b45309', // amber-700
+                borderColor: '#fbbf24', // amber-400
+                cutLine: '#f59e0b',
+                draw: (ctx, w, h) => {
+                    ctx.fillStyle = '#fffbeb'; // amber-50
+                    ctx.fillRect(0, 0, w, h);
+                    ctx.fillStyle = '#fcd34d'; // amber-300
+                    for(let y=0; y<h; y+=40) {
+                        for(let x=0; x<w; x+=40) {
+                            ctx.beginPath();
+                            ctx.arc(x+20, y+20, 10, 0, Math.PI*2);
+                            ctx.fill();
+                        }
+                    }
+                }
+            },
+            {
+                name: 'Neon Night',
+                textColor: '#0f0',
+                borderColor: '#0f0',
+                cutLine: '#0f0',
+                draw: (ctx, w, h) => {
+                    ctx.fillStyle = '#0f172a'; // slate-900
+                    ctx.fillRect(0, 0, w, h);
+                    ctx.strokeStyle = 'rgba(34, 197, 94, 0.3)'; // green-500 low opacity
+                    ctx.lineWidth = 2;
+                    // Grid pattern
+                    for(let i=0; i<w; i+=60) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,h); ctx.stroke(); }
+                    for(let i=0; i<h; i+=60) { ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(w,i); ctx.stroke(); }
+                }
+            },
+            {
+                name: 'Picnic',
+                textColor: '#b91c1c',
+                borderColor: 'rgba(185, 28, 28, 0.2)',
+                cutLine: '#fca5a5',
+                draw: (ctx, w, h) => {
+                    ctx.fillStyle = '#fff';
+                    ctx.fillRect(0, 0, w, h);
+                    ctx.fillStyle = 'rgba(239, 68, 68, 0.3)'; // red-500 transparent
+                    const size = 40;
+                    for(let x=0; x<w; x+=size) ctx.fillRect(x, 0, size/2, h);
+                    for(let y=0; y<h; y+=size) ctx.fillRect(0, y, w, size/2);
+                }
+            },
+            {
+                name: 'Blueprint',
+                textColor: '#fff',
+                borderColor: 'rgba(255,255,255,0.5)',
+                cutLine: '#93c5fd',
+                draw: (ctx, w, h) => {
+                    ctx.fillStyle = '#1e3a8a'; // blue-900
+                    ctx.fillRect(0, 0, w, h);
+                    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                    ctx.lineWidth = 1;
+                    const grid = 40;
+                    for(let x=0; x<w; x+=grid) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke(); }
+                    for(let y=0; y<h; y+=grid) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
+                }
+            },
+            {
+                name: 'Elegant Marble',
+                textColor: '#374151', // gray-700
+                borderColor: '#e5e7eb', // gray-200
+                cutLine: '#9ca3af',
+                draw: (ctx, w, h) => {
+                    ctx.fillStyle = '#f9fafb';
+                    ctx.fillRect(0, 0, w, h);
+                    ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+                    ctx.lineWidth = 50;
+                    ctx.lineCap = 'round';
+                    // Draw random marble veins
+                    for(let i=0; i<20; i++) {
+                        ctx.beginPath();
+                        ctx.moveTo(Math.random()*w, Math.random()*h);
+                        ctx.bezierCurveTo(Math.random()*w, Math.random()*h, Math.random()*w, Math.random()*h, Math.random()*w, Math.random()*h);
+                        ctx.stroke();
+                    }
+                }
+            },
+            {
+                name: 'Confetti',
+                textColor: '#222',
+                borderColor: 'rgba(0,0,0,0.1)',
+                cutLine: '#ccc',
+                draw: (ctx, w, h) => {
+                    ctx.fillStyle = '#fff';
+                    ctx.fillRect(0, 0, w, h);
+                    const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff'];
+                    for(let i=0; i<300; i++) {
+                        ctx.fillStyle = colors[Math.floor(Math.random()*colors.length)];
+                        ctx.beginPath();
+                        ctx.arc(Math.random()*w, Math.random()*h, Math.random()*5+2, 0, Math.PI*2);
+                        ctx.fill();
+                    }
+                }
+            },
+            {
+                name: 'Old Paper',
+                textColor: '#451a03',
+                borderColor: 'rgba(69, 26, 3, 0.2)',
+                cutLine: '#8c7e73',
+                draw: (ctx, w, h) => {
+                    ctx.fillStyle = '#f5f5dc'; // beige
+                    ctx.fillRect(0, 0, w, h);
+                    ctx.fillStyle = 'rgba(0,0,0,0.03)';
+                    for(let i=0; i<5000; i++) {
+                        ctx.fillRect(Math.random()*w, Math.random()*h, 2, 2);
+                    }
+                }
+            },
+            {
+                name: 'Vaporwave',
+                textColor: '#0ff',
+                borderColor: '#f0f',
+                cutLine: '#0ff',
+                draw: (ctx, w, h) => {
+                    const grd = ctx.createLinearGradient(0, 0, 0, h);
+                    grd.addColorStop(0, "#240046");
+                    grd.addColorStop(1, "#7b2cbf");
+                    ctx.fillStyle = grd;
+                    ctx.fillRect(0, 0, w, h);
+                    ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)';
+                    ctx.lineWidth = 2;
+                    // Sun
+                    ctx.fillStyle = 'rgba(255, 0, 255, 0.5)';
+                    ctx.beginPath();
+                    ctx.arc(w/2, h, 300, 0, Math.PI*2);
+                    ctx.fill();
+                    // Grid
+                    for(let y=h/2; y<h; y+=40) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
+                    for(let x=0; x<w; x+=60) { ctx.beginPath(); ctx.moveTo(w/2, h/2); ctx.lineTo(x- (x-w/2)*2, h); ctx.stroke(); } 
+                }
+            },
+            {
+                name: 'Camouflage',
+                textColor: '#fff',
+                borderColor: 'rgba(0,0,0,0.3)',
+                cutLine: '#555',
+                draw: (ctx, w, h) => {
+                    ctx.fillStyle = '#556b2f'; // olive
+                    ctx.fillRect(0, 0, w, h);
+                    const colors = ['#8b4513', '#000000', '#2e8b57'];
+                    for(let i=0; i<20; i++) {
+                        ctx.fillStyle = colors[i%3];
+                        ctx.beginPath();
+                        let x = Math.random()*w;
+                        let y = Math.random()*h;
+                        ctx.moveTo(x, y);
+                        for(let j=0; j<5; j++) {
+                            ctx.bezierCurveTo(x+Math.random()*200-100, y+Math.random()*200-100, x+Math.random()*200-100, y+Math.random()*200-100, x+Math.random()*200-100, y+Math.random()*200-100);
+                        }
+                        ctx.fill();
+                    }
+                }
+            },
+            {
+                name: 'Denim',
+                textColor: '#fff',
+                borderColor: '#fbbf24', // stitching color
+                cutLine: '#fbbf24',
+                draw: (ctx, w, h) => {
+                    ctx.fillStyle = '#1e3a8a'; // dark blue
+                    ctx.fillRect(0, 0, w, h);
+                    // Texture
+                    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+                    for(let i=0; i<w; i+=2) ctx.fillRect(i, 0, 1, h);
+                    for(let i=0; i<h; i+=2) ctx.fillRect(0, i, w, 1);
+                    
+                    // Stitching border around each strip area roughly
+                    ctx.strokeStyle = '#fbbf24'; // orange thread
+                    ctx.setLineDash([15, 10]);
+                    ctx.lineWidth = 4;
+                    // Left strip border
+                    ctx.strokeRect(20, 20, 560, 1760);
+                    // Right strip border
+                    ctx.strokeRect(620, 20, 560, 1760);
+                    ctx.setLineDash([]);
+                }
+            },
+            {
+                name: 'Rainbow',
+                textColor: '#222',
+                borderColor: '#fff',
+                cutLine: '#fff',
+                draw: (ctx, w, h) => {
+                    const colors = ['#ff0000', '#ff7f00', '#ffff00', '#00ff00', '#0000ff', '#4b0082', '#9400d3'];
+                    const step = h / colors.length;
+                    colors.forEach((c, i) => {
+                        ctx.fillStyle = c;
+                        ctx.fillRect(0, i*step, w, step+1);
+                    });
+                }
+            },
+            {
+                name: 'Midnight',
+                textColor: '#fff',
+                borderColor: 'rgba(255,255,255,0.2)',
+                cutLine: '#555',
+                draw: (ctx, w, h) => {
+                    ctx.fillStyle = '#111827';
+                    ctx.fillRect(0, 0, w, h);
+                }
+            },
+            {
+                name: 'Sunset',
+                textColor: '#fff',
+                borderColor: 'rgba(255,255,255,0.2)',
+                cutLine: '#fff',
+                draw: (ctx, w, h) => {
+                    const grd = ctx.createLinearGradient(0, 0, 0, h);
+                    grd.addColorStop(0, "#f43f5e");
+                    grd.addColorStop(1, "#fbbf24");
+                    ctx.fillStyle = grd;
+                    ctx.fillRect(0, 0, w, h);
+                }
+            }
+        ];
 
         // DOM Elements
         const views = {
@@ -262,9 +617,10 @@
         async function init() {
             await getCameras();
             startCamera();
-            setupColorPalette();
+            setupStyleCarousel();
+            setupStaticQR();
             
-            // Check URL param for booth mode (Launch in separate tab fallback)
+            // Check URL param for booth mode
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('mode') === 'booth') {
                 loadConfig();
@@ -278,6 +634,18 @@
             if(viewName === 'attract' || viewName === 'capture' || viewName === 'setup') {
                 startCamera(config.deviceId);
             }
+        }
+
+        // QR Code Setup
+        function setupStaticQR() {
+            const qrContainer = document.getElementById('static-qr-code');
+            const driveLink = "https://drive.google.com/drive/folders/1lEarwDNVilpc9xGBAwzHJfg4ZYTRTmoB?usp=sharing";
+            qrContainer.innerHTML = '';
+            new QRCode(qrContainer, {
+                text: driveLink,
+                width: 200, // Made bigger per request
+                height: 200
+            });
         }
 
         // Camera Logic
@@ -371,17 +739,13 @@
             }
         };
 
-        // Launch Logic (Modified to Single Page for Persistence)
+        // Launch Logic
         document.getElementById('btn-launch').onclick = () => {
             config.deviceId = document.getElementById('camera-select').value;
             localStorage.setItem('pb_config', JSON.stringify(config));
-            
-            // Try to go fullscreen for Kiosk feel
             if (document.documentElement.requestFullscreen) {
                 document.documentElement.requestFullscreen().catch(e => console.log(e));
             }
-            
-            // Switch view internally to keep DirectoryHandle alive
             loadConfig();
             switchView('attract');
         };
@@ -478,42 +842,78 @@
             }, 500);
         }
 
-        // Generation Logic
-        function setupColorPalette() {
-            const container = document.getElementById('color-palette');
-            colors.forEach(c => {
-                const btn = document.createElement('button');
-                btn.className = 'rounded-circle border border-2';
-                btn.style.width = '32px';
-                btn.style.height = '32px';
-                btn.style.backgroundColor = c;
-                btn.onclick = () => {
-                    config.bgColor = c;
-                    generateStrip();
-                };
-                container.appendChild(btn);
+        // Customization Logic (New Carousel)
+        function setupStyleCarousel() {
+            updateCarouselUI();
+
+            document.getElementById('btn-prev-style').onclick = () => {
+                const container = document.getElementById('strip-container');
+                // Animate Out Left
+                container.classList.add('slide-out-left');
+                
+                setTimeout(() => {
+                    config.styleIndex = (config.styleIndex - 1 + stripStyles.length) % stripStyles.length;
+                    updateCarouselUI();
+                    generateStrip(() => {
+                        container.classList.remove('slide-out-left');
+                        container.classList.add('slide-in-start-right'); // Start pos for animation
+                        
+                        // Force reflow
+                        void container.offsetWidth; 
+                        
+                        container.classList.remove('slide-in-start-right');
+                    });
+                }, 200);
+            };
+
+            document.getElementById('btn-next-style').onclick = () => {
+                const container = document.getElementById('strip-container');
+                // Animate Out Right
+                container.classList.add('slide-out-right');
+                
+                setTimeout(() => {
+                    config.styleIndex = (config.styleIndex + 1) % stripStyles.length;
+                    updateCarouselUI();
+                    generateStrip(() => {
+                        container.classList.remove('slide-out-right');
+                        container.classList.add('slide-in-start-left');
+                        void container.offsetWidth; 
+                        container.classList.remove('slide-in-start-left');
+                    });
+                }, 200);
+            };
+        }
+
+        function updateCarouselUI() {
+            const currentStyle = stripStyles[config.styleIndex];
+            document.getElementById('current-style-name').innerText = currentStyle.name;
+            
+            const dotsContainer = document.getElementById('style-dots');
+            dotsContainer.innerHTML = '';
+            stripStyles.forEach((_, idx) => {
+                const dot = document.createElement('div');
+                dot.className = `rounded-circle ${idx === config.styleIndex ? 'bg-light' : 'bg-secondary'}`;
+                dot.style.width = '8px';
+                dot.style.height = '8px';
+                dotsContainer.appendChild(dot);
             });
         }
 
-        function generateStrip() {
+        function generateStrip(callback) {
             const canvas = document.getElementById('final-canvas');
             const ctx = canvas.getContext('2d');
             const W = 1200;
             const H = 1800;
             
+            // Get current style
+            const currentStyle = stripStyles[config.styleIndex] || stripStyles[0];
+
             canvas.width = W;
             canvas.height = H;
             
-            ctx.fillStyle = config.bgColor;
-            ctx.fillRect(0, 0, W, H);
+            // 1. Draw Background using selected style
+            currentStyle.draw(ctx, W, H);
             
-            const hex = config.bgColor.replace('#','');
-            const r = parseInt(hex.substring(0,2),16);
-            const g = parseInt(hex.substring(2,4),16);
-            const b = parseInt(hex.substring(4,6),16);
-            const isDark = (r*299 + g*587 + b*114)/1000 < 128;
-            const textColor = isDark ? '#fff' : '#222';
-
             const drawColumn = (offsetX) => {
                 const stripW = 600;
                 const margin = 30;
@@ -526,6 +926,13 @@
                     const img = new Image();
                     img.src = src;
                     const y = topM + (i * (photoH + spacing));
+                    
+                    // Draw Shadow/Border (using style's border color)
+                    ctx.save();
+                    ctx.fillStyle = currentStyle.borderColor;
+                    ctx.fillRect(offsetX + margin - 2, y - 2, innerW + 4, photoH + 4);
+                    ctx.restore();
+
                     ctx.drawImage(img, offsetX + margin, y, innerW, photoH);
                 });
 
@@ -538,7 +945,7 @@
                     const lh = lImg.height * scale;
                     ctx.drawImage(lImg, offsetX + (stripW-lw)/2, logoY + (200-lh)/2, lw, lh);
                 } else {
-                    ctx.fillStyle = textColor;
+                    ctx.fillStyle = currentStyle.textColor;
                     ctx.font = 'bold 48px sans-serif';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
@@ -553,13 +960,14 @@
             if(config.mode === 'image' && config.logo) loadAll.push(new Promise(r => { const i = new Image(); i.onload = () => r(i); i.src = config.logo; }));
 
             Promise.all(loadAll).then(async () => {
-                drawColumn(0);
-                drawColumn(600);
+                // Drawing two strips
+                drawColumn(0); // Left Strip
+                drawColumn(600); // Right Strip
                 
                 // Cut line
                 ctx.beginPath();
                 ctx.setLineDash([20, 20]);
-                ctx.strokeStyle = isDark ? '#555' : '#ccc';
+                ctx.strokeStyle = currentStyle.cutLine;
                 ctx.lineWidth = 2;
                 ctx.moveTo(600, 0);
                 ctx.lineTo(600, 1800);
@@ -582,27 +990,28 @@
                 
                 if (saveDirectoryHandle) {
                     try {
-                        // Create Blob from Base64
                         const res = await fetch(finalData);
                         const blob = await res.blob();
-                        
-                        // Write to selected folder
                         const fileHandle = await saveDirectoryHandle.getFileHandle(filename, { create: true });
                         const writable = await fileHandle.createWritable();
                         await writable.write(blob);
                         await writable.close();
                         
-                        // Show success message
                         const toast = document.getElementById('auto-save-toast');
                         toast.classList.remove('hidden');
                         setTimeout(() => toast.classList.add('hidden'), 5000);
                     } catch (err) {
                         console.error("Auto-save failed", err);
-                        alert("Could not auto-save to folder. Please save manually.");
                     }
                 }
                 
-                switchView('result');
+                if(!document.getElementById('view-result').classList.contains('hidden')) {
+                    // Only switch view if not already there (prevents redraw flicker loop if logic was different)
+                } else {
+                    switchView('result');
+                }
+
+                if(callback) callback();
             });
         }
 
@@ -630,51 +1039,6 @@
                      document.body.removeChild(link);
                 }
             }
-        };
-
-        // QR Share Logic
-        document.getElementById('btn-share').onclick = async () => {
-            // Show Loading Modal
-            const modal = document.getElementById('qr-modal');
-            modal.classList.remove('hidden');
-            document.getElementById('qr-content').innerHTML = '<div class="spinner-border text-dark"></div><div class="mt-2 text-dark">Creating Link...</div>';
-
-            try {
-                // 1. Get Blob
-                const blob = await (await fetch(document.getElementById('final-image').src)).blob();
-                
-                // 2. Upload to file.io (Ephemeral storage)
-                const formData = new FormData();
-                formData.append('file', blob, 'photobooth.jpg');
-                
-                const response = await fetch('https://file.io/?expires=1d', {
-                    method: 'POST',
-                    body: formData
-                });
-                const json = await response.json();
-                
-                if(json.success) {
-                     document.getElementById('qr-content').innerHTML = '';
-                     new QRCode(document.getElementById('qr-content'), {
-                        text: json.link,
-                        width: 200,
-                        height: 200
-                     });
-                     const linkMsg = document.createElement('div');
-                     linkMsg.className = "mt-3 small text-muted";
-                     linkMsg.innerText = "Scan to download (Link expires after 1 download)";
-                     document.getElementById('qr-content').appendChild(linkMsg);
-                } else {
-                    throw new Error('Upload failed');
-                }
-            } catch(e) {
-                document.getElementById('qr-content').innerHTML = '<div class="text-danger">Could not generate link.<br>Check internet connection.</div>';
-                console.error(e);
-            }
-        };
-
-        document.getElementById('btn-close-qr').onclick = () => {
-            document.getElementById('qr-modal').classList.add('hidden');
         };
 
         document.getElementById('btn-new-session').onclick = () => {
